@@ -1,0 +1,40 @@
+cabal-version:   3.0
+name:            pf-statki
+version:         0.1.0.0
+license:         GPL-3.0-only
+license-file:    LICENSE
+author:          doaads
+maintainer:      nowobart@gmail.com
+category:        Game
+build-type:      Simple
+extra-doc-files: CHANGELOG.md
+
+common warnings
+    ghc-options: -Wall -threaded
+
+library
+    import:           warnings
+    exposed-modules:  Game
+    hs-source-dirs:   src
+    build-depends:    base ^>=4.21.0.0,
+                      network,
+                      bytestring,
+                      brick
+    default-language: GHC2024
+
+executable pf-statki
+    import:           warnings
+    main-is:          Main.hs
+    build-depends:    base ^>=4.21.0.0,
+                      brick,
+                      vty,
+                      vty-unix,
+                      text,
+                      mtl,
+                      microlens,
+                      microlens-mtl,
+                      microlens-th,
+                      network,
+                      pf-statki,
+    hs-source-dirs:   app
+    default-language: GHC2024
