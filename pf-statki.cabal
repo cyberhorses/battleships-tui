@@ -14,12 +14,19 @@ common warnings
 
 library
     import:           warnings
-    exposed-modules:  Game
+    exposed-modules:  Game,
+                      Events,
+                      State,
+                      Draw
     hs-source-dirs:   src
     build-depends:    base ^>=4.21.0.0,
                       network,
                       bytestring,
-                      brick
+                      brick,
+                      vty,
+                      microlens,
+                      microlens-mtl,
+                      microlens-th,
     default-language: GHC2024
 
 executable pf-statki
