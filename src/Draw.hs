@@ -10,6 +10,9 @@ module Draw
   , drawResult
   , drawHostingSetup
   , drawHosting
+  , drawConnected
+  , playerEmptyBoard
+  , enemyBoard
   ) where
 
 import State
@@ -21,6 +24,7 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Focus as F
 import Brick.Widgets.Border
 import Brick.Widgets.Core
+import Brick.AttrMap (attrName)
 
 -- Drawing logic
 -- Draw function for each mode (window)
@@ -30,6 +34,7 @@ drawUI st = case st^.mode of
     Joining        -> [drawResult st]
     HostingSetup   -> [drawHostingSetup st]
     Hosting        -> [drawHosting st]
+    Connected      -> [drawConnected st]
 
 -- Draw the initial input form
 drawForm :: St -> Widget Name
@@ -75,3 +80,40 @@ drawHosting :: St -> Widget Name
 drawHosting _ =
     C.center . borderWithLabel (str "Hosting") $
         (str "Waiting for other players...")
+
+-- placeholder
+playerEmptyBoard :: Board
+playerEmptyBoard = replicate 8 (replicate 8 Empty)  -- ~ = unknown
+
+drawConnected :: St -> Widget Name
+drawConnected st =
+  C.center $
+    vBox
+      [ str "Use arrow keys to move the cursor. Press SPACE to place a ship."
+      , str ""
+      , C.center $ hBox
+          [ (borderWithLabel (str "Your Board") $ drawBoard (st^.playerBoard) (Just (st^.cursorPos)))
+          ]
+      ]
+
+-- placeholder
+enemyBoard :: Board
+enemyBoard = replicate 8 (replicate 8 Empty)  -- ~ = unknown
+
+
+-- Draw one board with label
+drawBoard :: Board -> Maybe Coord -> Widget Name
+drawBoard board mCursor = vBox $ map drawRow [0..7]
+  where
+    drawRow r = hBox $ map (drawCell r) [0..7]
+
+    drawCell r c =
+      let cell = board !! r !! c
+          baseWidget = str $ " " ++ cellChar cell
+          withCursor = maybe id (\(cr, cc) -> if (r, c) == (cr, cc) then withAttr (attrName "cursor") else id) mCursor
+      in withCursor baseWidget
+
+    cellChar Empty = "~"
+    cellChar Ship  = "✕"
+    cellChar Hit   = "✖"
+    cellChar Miss  = "○"

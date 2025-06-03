@@ -35,6 +35,15 @@ import Lens.Micro.Mtl
 import Control.Monad.IO.Class
 import Control.Monad (void)
 
+move :: (Int, Int) -> Coord -> Coord
+move (dr, dc) (r, c) = (max 0 (min 7 (r+dr)), max 0 (min 7 (c+dc)))
+
+placeShip :: Coord -> Board -> Board
+placeShip (r, c) board =
+  take r board ++
+  [take c (board !! r) ++ [Ship] ++ drop (c+1) (board !! r)] ++
+  drop (r+1) board
+
 ---- Event handler -------------------------------------------
 
 -- | Handling of certain events such as kepresses, network signals
@@ -56,12 +65,12 @@ appEvent (VtyEvent (V.EvKey V.KEnter [])) = do
     m <- use mode
     case m of
       Inputting -> do -- if in Inputting state, start joining
-        ip <- unwords <$> use (editIp.to E.getEditContents)
-        g <- liftIO $ startJoining ip
+        ip   <- unwords <$> use (editIp.to E.getEditContents)
+        g    <- liftIO $ startJoining ip
         game .= Just g
-        mode .= Joining
+        mode .= Connected
       HostingSetup -> do -- if in hosting state, start hosting
-        g <- liftIO startHosting
+        g    <- liftIO startHosting
         game .= Just g
         mode .= Hosting
         chan <- use connChan
@@ -77,17 +86,30 @@ appEvent (VtyEvent (V.EvKey (V.KFun 1) [])) = do
     else return ()
 
 -- | Handle `tab` (change focus in input)
-appEvent (VtyEvent (V.EvKey (V.KChar '\t') [])) =
-    focusRing %= F.focusNext
+appEvent (VtyEvent (V.EvKey (V.KChar '\t') [])) = do
+    m <- use mode
+    if m == Inputting then focusRing %= F.focusNext
+    else return ()
 
 -- | Handle `backtab` (change focus in input)
-appEvent (VtyEvent (V.EvKey V.KBackTab [])) =
-    focusRing %= F.focusPrev
+appEvent (VtyEvent (V.EvKey V.KBackTab [])) = do
+    m <- use mode
+    if m == Inputting then focusRing %= F.focusPrev
+    else return ()
 
 -- | Handle ConnectionMade event (when accept() returns)
 appEvent (AppEvent ConnectionMade) = do
-    mode .= Joining
+    mode .= Connected
     return ()
+
+appEvent (VtyEvent (V.EvKey V.KUp [])) = cursorPos %= move (-1, 0)
+appEvent (VtyEvent (V.EvKey V.KDown [])) = cursorPos %= move (1, 0)
+appEvent (VtyEvent (V.EvKey V.KLeft [])) = cursorPos %= move (0, -1)
+appEvent (VtyEvent (V.EvKey V.KRight [])) = cursorPos %= move (0, 1)
+
+appEvent (VtyEvent (V.EvKey (V.KChar ' ') [])) = do
+  (r, c) <- use cursorPos
+  playerBoard %= placeShip (r, c)
 
 -- | Default
 appEvent ev = do

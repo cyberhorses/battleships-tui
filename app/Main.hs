@@ -35,12 +35,15 @@ initialState chan =
        Inputting
        Nothing
        chan
+       playerEmptyBoard
+       (0, 0)
 
 -- AttrMap
 theMap :: A.AttrMap
 theMap = A.attrMap V.defAttr
     [ (E.editAttr,        V.white `on` V.blue)
     , (E.editFocusedAttr, V.black `on` V.yellow)
+    , (A.attrName "cursor",          V.withStyle V.defAttr V.standout)
     ]
 
 -- App definition
