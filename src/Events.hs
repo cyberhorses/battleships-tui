@@ -18,6 +18,8 @@ import Game
   , startJoining
   , exit
   , waitForClient
+  , waitForReady
+  , sendReady
   , NetworkEvent(..)
   )
 
@@ -28,6 +30,7 @@ import Control.Concurrent (forkIO)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Focus as F
 import qualified Brick.Types as T
+import qualified Data.Map as M
 
 import Lens.Micro
 import Lens.Micro.Mtl
@@ -35,14 +38,49 @@ import Lens.Micro.Mtl
 import Control.Monad.IO.Class
 import Control.Monad (void)
 
-move :: (Int, Int) -> Coord -> Coord
-move (dr, dc) (r, c) = (max 0 (min 7 (r+dr)), max 0 (min 7 (c+dc)))
+canPlace :: Int -> RemainingShips -> Bool
+canPlace len ships = do
+  case M.lookup len ships of
+    Just n  -> n > 0
+    Nothing -> False
 
-placeShip :: Coord -> Board -> Board
-placeShip (r, c) board =
-  take r board ++
-  [take c (board !! r) ++ [Ship] ++ drop (c+1) (board !! r)] ++
-  drop (r+1) board
+move :: Coord -> Coord -> Coord
+move (dr, dc) (r, c) = (max 0 (min 9 (r+dr)), max 0 (min 9 (c+dc)))
+
+replaceNth :: Int -> a -> [a] -> [a]
+replaceNth i x xs = take i xs ++ [x] ++ drop (i + 1) xs
+
+replaceColumn :: Int -> Int -> Int -> a -> [[a]] -> [[a]]
+replaceColumn col start end val board =
+  [ if r >= min start end && r <= max start end
+      then replaceNth col val row
+      else row
+  | (r, row) <- zip [0..] board ]
+
+decrementShips :: Int -> RemainingShips -> RemainingShips
+decrementShips len ships = M.update dec len ships
+   where dec n = if n > 1 then Just (n-1) else Nothing
+
+placeShip :: Coord -> Coord -> RemainingShips -> Board -> (Board, RemainingShips)
+placeShip (r1, c1) (r2, c2) ships board
+  | r1 == r2  = do
+    if   canPlace len_r ships 
+    then (replaceNth r1 newRow board, decrementShips len_r ships)
+    else (board, ships)
+  | c1 == c2  = do
+    if   canPlace len_c ships
+    then (replaceColumn c1 r1 r2 Ship board, decrementShips len_c ships)
+    else (board, ships)
+  | otherwise = (board, ships)  -- Not a straight line
+  where
+    -- For horizontal ship placement
+    row       = board !! r1
+    newRow    = [ if c >= min c1 c2 && c <= max c1 c2
+                 then Ship
+                 else tile
+              | (c, tile) <- zip [0..] row ]
+    len_c     = abs (r2 - r1) + 1
+    len_r     = abs (c2 - c1) + 1
 
 ---- Event handler -------------------------------------------
 
@@ -75,6 +113,16 @@ appEvent (VtyEvent (V.EvKey V.KEnter [])) = do
         mode .= Hosting
         chan <- use connChan
         liftIO $ void $ forkIO $ Game.waitForClient chan g
+      Connected    -> do
+        mg   <- use game
+        chan <- use connChan
+        case mg of
+          Just g -> do
+            mode    .= Waiting
+            liftIO $ Game.sendReady g
+            liftIO $ void $ forkIO $ Game.waitForReady chan g
+            playerReady .= True
+          Nothing  -> return ()
       _            -> return ()
 
 -- | Handle `h` (in inputting)
@@ -100,6 +148,16 @@ appEvent (VtyEvent (V.EvKey V.KBackTab [])) = do
 -- | Handle ConnectionMade event (when accept() returns)
 appEvent (AppEvent ConnectionMade) = do
     mode .= Connected
+
+-- | Handle Ready network event (when opponent declares ready)
+appEvent (AppEvent Ready) = do
+    m    <- use mode
+    mg   <- use game
+    case mg of
+        Just g  -> liftIO $ sendReady g
+        Nothing -> return ()
+    if m == Waiting then mode .= Playing
+    else enemyReady .= True
     return ()
 
 appEvent (VtyEvent (V.EvKey V.KUp [])) = cursorPos %= move (-1, 0)
@@ -108,8 +166,21 @@ appEvent (VtyEvent (V.EvKey V.KLeft [])) = cursorPos %= move (0, -1)
 appEvent (VtyEvent (V.EvKey V.KRight [])) = cursorPos %= move (0, 1)
 
 appEvent (VtyEvent (V.EvKey (V.KChar ' ') [])) = do
-  (r, c) <- use cursorPos
-  playerBoard %= placeShip (r, c)
+  cm       <- use cursorMode
+  case cm of
+    Selecting -> do
+      (x, y)   <- use cursorPos
+      firstSelect .= (x, y)
+      cursorMode  .= Placing
+    Placing   -> do
+      (x, y)   <- use cursorPos
+      (xs, ys) <- use firstSelect
+      ships    <- use remainingShips
+      board    <- use playerBoard
+      let (newBoard, newShips) = placeShip (x, y) (xs, ys) ships board
+      playerBoard    .= newBoard
+      remainingShips .= newShips
+      cursorMode     .= Selecting
 
 -- | Default
 appEvent ev = do

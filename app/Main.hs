@@ -24,7 +24,8 @@ import qualified Brick.AttrMap as A
 import qualified Brick.Focus as F
 import qualified Brick.Main as M
 
-import Brick.Util (on)
+import Brick.Util (on, fg)
+
 
 -- Initial state
 initialState :: BChan NetworkEvent -> St
@@ -37,13 +38,22 @@ initialState chan =
        chan
        playerEmptyBoard
        (0, 0)
+       (0, 0)
+       Selecting
+       defaultShips
+       False
+       False
 
 -- AttrMap
 theMap :: A.AttrMap
 theMap = A.attrMap V.defAttr
     [ (E.editAttr,        V.white `on` V.blue)
     , (E.editFocusedAttr, V.black `on` V.yellow)
-    , (A.attrName "cursor",          V.withStyle V.defAttr V.standout)
+    , (A.attrName "cursor", V.withStyle V.defAttr V.standout `V.withStyle` V.reverseVideo)
+    , (A.attrName "water",  fg V.blue)
+    , (A.attrName "ship",   fg V.cyan)
+    , (A.attrName "hit",    fg V.red)
+    , (A.attrName "miss",   fg V.white)
     ]
 
 -- App definition

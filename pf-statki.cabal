@@ -27,6 +27,8 @@ library
                       microlens,
                       microlens-mtl,
                       microlens-th,
+                      text,
+                      containers
     default-language: GHC2024
 
 executable pf-statki
