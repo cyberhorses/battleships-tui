@@ -117,15 +117,25 @@ drawBoard board mCursor = vBox $ map drawRow [0..9]
 
     drawCell r c =
       let cell = board !! r !! c
-          cellWidget = str " " <+> cellChar cell
-          box = cellWidget
-          withCursor = maybe id (\(cr, cc) -> if (r, c) == (cr, cc) then withAttr (attrName "cursor") else id) mCursor
-      in withCursor box
+          symbol = case cell of
+            Empty -> "~"
+            Ship  -> "✕"
+            Hit   -> "✖"
+            Miss  -> "○"
+          baseAttr = case cell of
+            Empty -> attrName "water"
+            Ship  -> attrName "ship"
+            Hit   -> attrName "hit"
+            Miss  -> attrName "miss"
+          finalAttr = if Just (r, c) == mCursor
+                      then attrName "cursor"
+                      else baseAttr
+      in withAttr finalAttr (str (" " ++ symbol))
 
-    cellChar Empty = withAttr (attrName "water")   (str "~")
-    cellChar Ship  = withAttr (attrName "ship")    (str "✕")
-    cellChar Hit   = withAttr (attrName "hit")     (str "✖")
-    cellChar Miss  = withAttr (attrName "miss")    (str "○")
+    --cellChar Empty = str "~"
+    --cellChar Ship  = str "✕"
+    --cellChar Hit   = str "✖"
+    --cellChar Miss  = str "○"
 
 drawShipsLeft :: RemainingShips -> Widget Name
 drawShipsLeft ships = do
@@ -151,6 +161,6 @@ drawWaiting :: St -> Widget Name
 drawWaiting st =
   C.center $
     vBox
-      [
-        str "Waiting for other player..."
+      [ border $ drawBoard (st^.playerBoard) (Just (st^.cursorPos))
+      , str "Waiting for other player..."
       ]

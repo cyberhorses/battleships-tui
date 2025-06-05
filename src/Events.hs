@@ -63,12 +63,12 @@ decrementShips len ships = M.update dec len ships
 
 placeShip :: Coord -> Coord -> RemainingShips -> Board -> (Board, RemainingShips)
 placeShip (r1, c1) (r2, c2) ships board
-  | r1 == r2  = do
-    if   canPlace len_r ships 
+  | r1 == r2  = 
+    if canPlace len_r ships && all (\c -> (board !! r1) !! c == Empty) [min c1 c2 .. max c1 c2]
     then (replaceNth r1 newRow board, decrementShips len_r ships)
     else (board, ships)
-  | c1 == c2  = do
-    if   canPlace len_c ships
+  | c1 == c2  =
+    if canPlace len_c ships && all (\r -> (board !! r) !! c1 == Empty) [min r1 r2 .. max r1 r2]
     then (replaceColumn c1 r1 r2 Ship board, decrementShips len_c ships)
     else (board, ships)
   | otherwise = (board, ships)  -- Not a straight line
@@ -78,9 +78,10 @@ placeShip (r1, c1) (r2, c2) ships board
     newRow    = [ if c >= min c1 c2 && c <= max c1 c2
                  then Ship
                  else tile
-              | (c, tile) <- zip [0..] row ]
+               | (c, tile) <- zip [0..] row ]
     len_c     = abs (r2 - r1) + 1
     len_r     = abs (c2 - c1) + 1
+
 
 ---- Event handler -------------------------------------------
 
