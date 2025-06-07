@@ -36,7 +36,7 @@ import Lens.Micro
 import Lens.Micro.Mtl
 
 import Control.Monad.IO.Class
-import Control.Monad (void)
+import Control.Monad (void, when)
 
 canPlace :: Int -> RemainingShips -> Bool
 canPlace len ships = do
@@ -109,7 +109,9 @@ appEvent (VtyEvent (V.EvKey V.KEnter [])) = do
         game .= Just g
         mode .= Connected
       HostingSetup -> do -- if in hosting state, start hosting
-        g    <- liftIO startHosting
+        idx <- use ifaceSelected
+        ifs <- use ifaces
+        g    <- liftIO $ startHosting $ snd $ ifs !! idx
         game .= Just g
         mode .= Hosting
         chan <- use connChan
@@ -161,10 +163,23 @@ appEvent (AppEvent Ready) = do
     else enemyReady .= True
     return ()
 
-appEvent (VtyEvent (V.EvKey V.KUp [])) = cursorPos %= move (-1, 0)
-appEvent (VtyEvent (V.EvKey V.KDown [])) = cursorPos %= move (1, 0)
+appEvent (VtyEvent (V.EvKey V.KUp [])) = do
+    m <- use mode
+    if m == HostingSetup
+      then ifaceSelected %= (\i -> max 0 (i-1))
+      else cursorPos %= move (-1, 0)
+
+appEvent (VtyEvent (V.EvKey V.KDown [])) = do
+    m <- use mode
+    if m == HostingSetup
+      then do
+        ifs <- use ifaces
+        ifaceSelected %= (\i -> min (length ifs - 1) (i+1))
+      else cursorPos %= move (1, 0)
+
 appEvent (VtyEvent (V.EvKey V.KLeft [])) = cursorPos %= move (0, -1)
 appEvent (VtyEvent (V.EvKey V.KRight [])) = cursorPos %= move (0, 1)
+
 
 appEvent (VtyEvent (V.EvKey (V.KChar ' ') [])) = do
   cm       <- use cursorMode

@@ -11,10 +11,13 @@ module Game
   , waitForReady
   , sendReady
   , exit
+  , getIPv4Interfaces
   , NetworkEvent(..)
   ) where
 
+import Config
 import Network.Socket
+import Network.Info
 import Data.IORef
 import Brick.BChan (BChan, writeBChan)
 import qualified Data.ByteString.Char8 as BS
@@ -30,12 +33,12 @@ data NetworkEvent = ConnectionMade
                   | Ready
 
 
-startHosting :: IO Game
-startHosting = do
+startHosting :: String -> IO Game
+startHosting ip = do
     addrinfos <- getAddrInfo
                    (Just (defaultHints { addrFlags = [AI_PASSIVE] }))
-                   Nothing
-                   (Just "3000")
+                   (Just ip)
+                   (Just gamePort)
     let serveraddr = head addrinfos
 
     sock <- socket (addrFamily serveraddr) Stream defaultProtocol
@@ -48,7 +51,7 @@ startHosting = do
 
 startJoining :: String -> IO Game
 startJoining ip = do
-    addrinfos <- getAddrInfo Nothing (Just ip) (Just "3000")
+    addrinfos <- getAddrInfo Nothing (Just ip) (Just gamePort)
     let serveraddr = head addrinfos
 
     sock <- socket (addrFamily serveraddr) Stream defaultProtocol
@@ -96,3 +99,9 @@ waitForReady chan Game{..} = do
                 writeBChan chan Ready
               else waitForReady chan Game{..}  -- keep listening
         Nothing -> putStrLn "No opponent socket found."
+
+
+getIPv4Interfaces :: IO [(String, String)]
+getIPv4Interfaces = do
+    ifaces <- getNetworkInterfaces
+    pure [ (name i, show (ipv4 i)) | i <- ifaces, show (ipv4 i) /= "0.0.0.0" ]

@@ -3,8 +3,8 @@ name:            pf-statki
 version:         0.1.0.0
 license:         GPL-3.0-only
 license-file:    LICENSE
-author:          doaads
-maintainer:      nowobart@gmail.com
+author:          doaads, sucholbluk
+maintainer:      nowobart@gmail.com, sucholbiaklukasz@gmail.com
 category:        Game
 build-type:      Simple
 extra-doc-files: CHANGELOG.md
@@ -17,10 +17,12 @@ library
     exposed-modules:  Game,
                       Events,
                       State,
-                      Draw
+                      Draw,
+                      Config
     hs-source-dirs:   src
     build-depends:    base ^>=4.21.0.0,
                       network,
+                      network-info,
                       bytestring,
                       brick,
                       vty,
@@ -44,6 +46,7 @@ executable pf-statki
                       microlens-mtl,
                       microlens-th,
                       network,
+                      network-info,
                       pf-statki,
     hs-source-dirs:   app
     default-language: GHC2024

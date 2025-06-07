@@ -25,6 +25,7 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Focus as F
 import Brick.Widgets.Border
 import Brick.Widgets.Core
+import Brick.Widgets.Center (center)
 import Brick.AttrMap (attrName)
 
 import qualified Data.Map.Strict as M
@@ -74,19 +75,35 @@ drawResult st =
 drawHostingSetup :: St -> Widget Name
 drawHostingSetup st =
     C.center . borderWithLabel (str "Hosting") $
-        (str "Password:   " <+> (hLimit 30 $ vLimit 1 ePswd)) <=>
-        str " " <=>
-        str "Press ENTER to submit." <=>
-        str "" <=>
-        str "Press Esc to exit."
+      vBox
+        [ str "Host on:"
+        , vBox $ zipWith drawIface [0..] (st^.ifaces)
+        , str "Password:   " <+> (hLimit 30 $ vLimit 1 ePswd)
+        , str " "
+        , str "Press ENTER to submit."
+        , str ""
+        , str "Press Esc to exit."
+        ]
   where
     ePswd = F.withFocusRing (st^.focusRing) (E.renderEditor (str . unlines)) (st^.editPswd)
+    sel = st^.ifaceSelected
+    drawIface i (n, ip) =
+      (if i == sel then withAttr (attrName "editFocusedAttr") else id) $
+        str $ n ++ ": " ++ ip
 
 -- Draw the waiting for connection screen
 drawHosting :: St -> Widget Name
-drawHosting _ =
-    C.center . borderWithLabel (str "Hosting") $
-        (str "Waiting for other players...")
+drawHosting st =
+    let idx = st^.ifaceSelected
+        ifs = st^.ifaces
+        ip = snd (ifs !! idx)
+    in C.center . borderWithLabel (str "Hosting") $
+         vBox
+           [ str $ "Hosting on: " ++ ip
+           , str " "
+           , str "Waiting for other player..."
+           ]
+    
 
 -- placeholder
 playerEmptyBoard :: Board

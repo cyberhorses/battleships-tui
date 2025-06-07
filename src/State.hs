@@ -9,6 +9,8 @@ module State
   , focusRing
   , editIp
   , editPswd
+  , ifaces
+  , ifaceSelected
   , mode
   , game
   , connChan
@@ -25,6 +27,7 @@ module State
   , Coord
   , Cell(..)
   , RemainingShips
+  , Interfaces
   ) where
 
 import Lens.Micro.TH
@@ -52,6 +55,8 @@ data Mode = Inputting
 data CursorMode = Selecting
                 | Placing
 
+type Interfaces = [(String, String)]
+
 type Coord = (Int, Int)  -- (row, col)
 
 data Cell = Empty | Ship | Hit | Miss deriving (Eq)
@@ -72,6 +77,8 @@ data St =
     St { _focusRing      :: F.FocusRing Name      -- Brick's focus rings (for tracking focus on input fields)
        , _editIp         :: E.Editor String Name  -- IP Edit field
        , _editPswd       :: E.Editor String Name  -- password edit field
+       , _ifaces         :: Interfaces            -- interface (name, ip)
+       , _ifaceSelected  :: Int                   -- index of interface selected
        , _mode           :: Mode                  -- currently displayed screen
        , _game           :: Maybe Game            -- the game
        , _connChan       :: BChan NetworkEvent    -- connection event channel

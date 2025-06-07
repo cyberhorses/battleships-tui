@@ -7,7 +7,7 @@ module Main where
 import Lens.Micro
 import qualified Graphics.Vty as V
 
-import Game (NetworkEvent(..))  -- Main Game
+import Game (NetworkEvent(..), getIPv4Interfaces)  -- Main Game
 
 import Brick
   ( App(..)
@@ -28,11 +28,13 @@ import Brick.Util (on, fg)
 
 
 -- Initial state
-initialState :: BChan NetworkEvent -> St
-initialState chan =
+initialState :: BChan NetworkEvent -> Interfaces -> St
+initialState chan interfaces =
     St (F.focusRing [EditIp, EditPswd])
        (E.editor EditIp (Just 1) "")
        (E.editor EditPswd (Just 1) "")
+       interfaces
+       0
        Inputting
        Nothing
        chan
@@ -49,6 +51,7 @@ theMap :: A.AttrMap
 theMap = A.attrMap V.defAttr
     [ (E.editAttr,        V.white `on` V.blue)
     , (E.editFocusedAttr, V.black `on` V.yellow)
+    , (A.attrName "editFocusedAttr", V.black `on` V.yellow)  -- <-- dodaj to!
     , (A.attrName "cursor", V.withStyle V.defAttr V.standout `V.withStyle` V.reverseVideo)
     , (A.attrName "water",  fg V.blue)
     , (A.attrName "ship",   fg V.cyan)
@@ -70,7 +73,8 @@ theApp = App
 main :: IO ()
 main = do
     chan <- newBChan 10
-    let initSt = initialState chan
+    interfaces <- getIPv4Interfaces
+    let initSt = initialState chan interfaces
 
     vty <- mkVty V.defaultConfig
     finalState <- M.customMain vty (mkVty V.defaultConfig) (Just chan) theApp initSt
@@ -78,4 +82,8 @@ main = do
     -- 5) After the UI quits, print the IP/Password
     putStrLn $ "IP Address: " ++ unwords (E.getEditContents $ finalState^.editIp)
     putStrLn $ "Password:   " ++ unwords (E.getEditContents $ finalState^.editPswd)
+
+    putStrLn "Interfases:"
+    mapM_ (\(n, ip) -> putStrLn $ n ++ ": " ++ ip) (finalState^.ifaces)
+
 
