@@ -15,6 +15,7 @@ module State
   , game
   , connChan
   , playerBoard
+  , opponentBoard 
   , cursorPos
   , firstSelect
   , cursorMode
@@ -22,6 +23,7 @@ module State
   , defaultShips
   , playerReady
   , enemyReady
+  , infoMsg
   , Board
   , CursorMode(..)
   , Coord
@@ -37,6 +39,7 @@ import qualified Brick.Focus as F
 import qualified Data.Map as M
 
 import Game(Game(..), NetworkEvent(..))
+import Ships
 import Brick.BChan (BChan)
 
 -- Widget Names
@@ -57,21 +60,6 @@ data CursorMode = Selecting
 
 type Interfaces = [(String, String)]
 
-type Coord = (Int, Int)  -- (row, col)
-
-data Cell = Empty | Ship | Hit | Miss deriving (Eq)
-type Board = [[Cell]]  -- 8x8 grid
-
-type RemainingShips = M.Map Int Int
-
-defaultShips :: RemainingShips
-defaultShips = M.fromList
-  [ (2, 1)
-  , (3, 2)
-  , (4, 1)
-  , (5, 1)
-  ]
-
 -- App state
 data St =
     St { _focusRing      :: F.FocusRing Name      -- Brick's focus rings (for tracking focus on input fields)
@@ -83,12 +71,14 @@ data St =
        , _game           :: Maybe Game            -- the game
        , _connChan       :: BChan NetworkEvent    -- connection event channel
        , _playerBoard    :: Board                 -- the player's board
+       , _opponentBoard  :: Board                 -- the opponent's board
        , _cursorPos      :: Coord                 -- where the cursor is for placing ships
        , _firstSelect    :: Coord                 -- where the cursor is for placing ships
        , _cursorMode     :: CursorMode            -- in what mode our cursor currently is on the grid
        , _remainingShips :: RemainingShips        -- how many more ships we can place
        , _playerReady    :: Bool
        , _enemyReady     :: Bool
+       , _infoMsg        :: String
        }
 
 makeLenses ''St

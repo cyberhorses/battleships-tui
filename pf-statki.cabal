@@ -18,6 +18,7 @@ library
                       Events,
                       State,
                       Draw,
+                      Ships,
                       Config
     hs-source-dirs:   src
     build-depends:    base ^>=4.21.0.0,

@@ -12,10 +12,9 @@ module Draw
   , drawHosting
   , drawConnected
   , drawWaiting
-  , playerEmptyBoard
-  , enemyBoard
   ) where
 
+import Ships
 import State
 import Brick(Widget)
 import Lens.Micro
@@ -26,6 +25,7 @@ import qualified Brick.Focus as F
 import Brick.Widgets.Border
 import Brick.Widgets.Core
 import Brick.Widgets.Center (center)
+import Data.Char  
 import Brick.AttrMap (attrName)
 
 import qualified Data.Map.Strict as M
@@ -35,14 +35,16 @@ import qualified Data.List as L
 -- Drawing logic
 -- Draw function for each mode (window)
 drawUI :: St -> [Widget Name]
-drawUI st = case st^.mode of
-    Inputting      -> [drawForm st]
-    Joining        -> [drawResult st]
-    HostingSetup   -> [drawHostingSetup st]
-    Hosting        -> [drawHosting st]
-    Connected      -> [drawConnected st]
-    Waiting        -> [drawWaiting st]
-    Playing        -> [drawPlaying st]
+drawUI st = [mainDisp <=> drawInfoMsg st]
+  where
+    mainDisp = case st^.mode of
+      Inputting      -> drawForm st
+      Joining        -> drawResult st
+      HostingSetup   -> drawHostingSetup st
+      Hosting        -> drawHosting st
+      Connected      -> drawConnected st
+      Waiting        -> drawWaiting st
+      Playing        -> drawPlaying st
 
 -- Draw the initial input form
 drawForm :: St -> Widget Name
@@ -78,6 +80,7 @@ drawHostingSetup st =
       vBox
         [ str "Host on:"
         , vBox $ zipWith drawIface [0..] (st^.ifaces)
+        , str " "
         , str "Password:   " <+> (hLimit 30 $ vLimit 1 ePswd)
         , str " "
         , str "Press ENTER to submit."
@@ -89,7 +92,7 @@ drawHostingSetup st =
     sel = st^.ifaceSelected
     drawIface i (n, ip) =
       (if i == sel then withAttr (attrName "editFocusedAttr") else id) $
-        str $ n ++ ": " ++ ip
+        str $ " • " ++ n ++ ": " ++ ip
 
 -- Draw the waiting for connection screen
 drawHosting :: St -> Widget Name
@@ -105,9 +108,6 @@ drawHosting st =
            ]
     
 
--- placeholder
-playerEmptyBoard :: Board
-playerEmptyBoard = replicate 10 (replicate 10 Empty)  -- ~ = unknown
 
 drawConnected :: St -> Widget Name
 drawConnected st =
@@ -128,10 +128,16 @@ enemyBoard = replicate 10 (replicate 10 Empty)  -- ~ = unknown
 
 -- Draw one board with label
 drawBoard :: Board -> Maybe Coord -> Widget Name
-drawBoard board mCursor = vBox $ map drawRow [0..9]
+drawBoard board mCursor =
+  vBox $
+    [ hBox (str "   " : [str (" " ++ [chr (ord 'A' + c)]) | c <- [0..9]]) ] ++
+    [ hBox (str (rowLabel r) : [drawCell r c | c <- [0..9]])
+    | r <- [0..9]
+    ]
   where
-    drawRow r = hBox $ map (drawCell r) [0..9]
-
+    rowLabel r
+      | r < 9     = " " ++ show (r+1) ++ " "
+      | otherwise = show (r+1) ++ " "
     drawCell r c =
       let cell = board !! r !! c
           symbol = case cell of
@@ -148,7 +154,6 @@ drawBoard board mCursor = vBox $ map drawRow [0..9]
                       then attrName "cursor"
                       else baseAttr
       in withAttr finalAttr (str (" " ++ symbol))
-
     --cellChar Empty = str "~"
     --cellChar Ship  = str "✕"
     --cellChar Hit   = str "✖"
@@ -181,3 +186,17 @@ drawWaiting st =
       [ border $ drawBoard (st^.playerBoard) (Just (st^.cursorPos))
       , str "Waiting for other player..."
       ]
+
+
+drawInfoMsg :: St -> Widget Name
+drawInfoMsg st =
+  if null (st^.infoMsg)
+    then str ""
+    else str $ getInfoMsg st
+
+getInfoMsg :: St -> String
+getInfoMsg st =
+  let msg = st^.infoMsg
+  in if null msg
+       then ""
+       else "INFO: " ++ msg

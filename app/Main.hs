@@ -16,6 +16,7 @@ import Brick
 import Events  -- Event handling (button press, network etc.)
 import State   -- Current app state
 import Draw    -- Drawing TUI scenes
+import Ships
 
 import Graphics.Vty.Platform.Unix (mkVty)
 import Brick.BChan (BChan, newBChan)
@@ -38,13 +39,15 @@ initialState chan interfaces =
        Inputting
        Nothing
        chan
-       playerEmptyBoard
+       emptyBoard
+       emptyBoard
        (0, 0)
-       (0, 0)
+       (0,0)
        Selecting
        defaultShips
        False
        False
+       ""
 
 -- AttrMap
 theMap :: A.AttrMap
