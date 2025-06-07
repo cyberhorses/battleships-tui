@@ -115,16 +115,14 @@ drawConnected st =
     vBox
         [
           C.center $ hBox
-            [ (borderWithLabel (str "Your Board") $ drawBoard (st^.playerBoard) (Just (st^.cursorPos)))
+            [ drawYourShips (st^.playerShips) (length (st^.playerBoard) + 2)
+            , (borderWithLabel (str "Your Board") $ drawBoard (st^.playerBoard) (Just (st^.cursorPos)))
             , str " "
             , drawShipsLeft (st^.remainingShips)
             ]
           , str "Use arow keys to move the cursor, Press SPACE to start placing"
       ]
 
--- placeholder
-enemyBoard :: Board
-enemyBoard = replicate 10 (replicate 10 Empty)  -- ~ = unknown
 
 -- Draw one board with label
 drawBoard :: Board -> Maybe Coord -> Widget Name
@@ -193,6 +191,22 @@ drawInfoMsg st =
   if null (st^.infoMsg)
     then str ""
     else str $ getInfoMsg st
+
+
+drawYourShips :: ShipMap -> Int -> Widget Name
+drawYourShips shipMap boardHeight =
+  if M.null shipMap
+    then str "" 
+    else vLimit boardHeight $
+      borderWithLabel (str "Your ships:") $
+        vBox $ map renderShip (M.toList shipMap)
+  where
+    renderShip (ship, lifes) =
+      let c1 = showCoord (start ship)
+          c2 = showCoord (end ship)
+          l  = len ship
+      in str $ "(" ++ c1 ++ ", " ++ c2 ++ ")  " ++ show lifes ++ "/" ++ show l
+
 
 getInfoMsg :: St -> String
 getInfoMsg st =

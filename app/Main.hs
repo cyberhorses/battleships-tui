@@ -40,6 +40,7 @@ initialState chan interfaces =
        Nothing
        chan
        emptyBoard
+       emptyShipMap
        emptyBoard
        (0, 0)
        (0,0)

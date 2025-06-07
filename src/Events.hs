@@ -156,6 +156,7 @@ appEvent (VtyEvent (V.EvKey (V.KChar ' ') [])) = do
         Just (newBoard, newShips, newShip) -> do
           playerBoard    .= newBoard
           remainingShips .= newShips
+          playerShips    %= addShipToMap newShip
           infoMsg .= getPlacedInfo (xs, ys) (x, y)
         Nothing -> infoMsg .= getCannotPlaceInfo (xs, ys) (x, y)
       cursorMode     .= Selecting

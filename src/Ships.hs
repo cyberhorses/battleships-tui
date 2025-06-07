@@ -2,13 +2,16 @@ module Ships
     ( Coord
     , ShipLen
     , ShipCount
-    , Direction(..)
+    , Lifes
+    , ShipMap
     , UserShip(..)
     , Cell(..)
     , Board
     , RemainingShips
     , defaultShips
     , emptyBoard
+    , emptyShipMap
+    , addShipToMap
     , adjacentCoords
     , canPlace
     , getCell
@@ -35,15 +38,15 @@ type ShipLen = Int --- ship length
 
 type ShipCount = Int
 
-data Direction = Horizontal | Vertical deriving (Eq, Show)
+type Lifes = Int
 
 data UserShip = UserShip
   { start     :: Coord
-  , direction :: Direction
+  , end       :: Coord
   , len       :: ShipLen
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Ord)
 
-type ShipList = [UserShip]
+type ShipMap = M.Map UserShip Lifes
 
 data Cell = Empty | Ship | Hit | Miss deriving (Eq)
 
@@ -62,6 +65,13 @@ defaultShips = M.fromList
 
 emptyBoard :: Board
 emptyBoard = replicate Cnf.mapSize (replicate Cnf.mapSize Empty)  -- ~ = unknown
+
+emptyShipMap :: ShipMap
+emptyShipMap = M.empty
+
+--- częściowa aplikacja
+addShipToMap :: UserShip -> ShipMap -> ShipMap
+addShipToMap ship = M.insert ship (len ship)
 
 shipCoords :: Coord -> Coord -> Maybe [Coord]
 shipCoords (x1, y1) (x2, y2)
@@ -106,10 +116,9 @@ placeShip c1 c2 availableShips board
 
         if (shipLenAvailable shipLength availableShips) && all inBounds coords && canPlace board coords
           then
-            let direction = if fst c1 == fst c2 then Vertical else Horizontal
-                newBoard = setShip board coords
+            let newBoard = setShip board coords
                 newShips = decrementShips shipLength availableShips
-            in Just (newBoard, newShips, UserShip (minimum coords) direction (length coords))
+            in Just (newBoard, newShips, UserShip (minimum coords) (maximum coords) (length coords))
           else Nothing
 
 shipLenAvailable :: ShipLen -> RemainingShips -> Bool

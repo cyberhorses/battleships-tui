@@ -15,6 +15,7 @@ module State
   , game
   , connChan
   , playerBoard
+  , playerShips
   , opponentBoard 
   , cursorPos
   , firstSelect
@@ -71,6 +72,7 @@ data St =
        , _game           :: Maybe Game            -- the game
        , _connChan       :: BChan NetworkEvent    -- connection event channel
        , _playerBoard    :: Board                 -- the player's board
+       , _playerShips    :: ShipMap               -- player's ships with lifes
        , _opponentBoard  :: Board                 -- the opponent's board
        , _cursorPos      :: Coord                 -- where the cursor is for placing ships
        , _firstSelect    :: Coord                 -- where the cursor is for placing ships
