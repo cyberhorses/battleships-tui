@@ -14,7 +14,8 @@ common warnings
 
 library
     import:           warnings
-    exposed-modules:  Game,
+    exposed-modules:  GameSession,
+                      MsgHandle,
                       Events,
                       State,
                       Draw,
@@ -31,7 +32,8 @@ library
                       microlens-mtl,
                       microlens-th,
                       text,
-                      containers
+                      containers,
+                      split
     default-language: GHC2024
 
 executable pf-statki

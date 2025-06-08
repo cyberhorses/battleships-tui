@@ -22,9 +22,10 @@ module Ships
     , shipLenAvailable
     , decrementShips
     , move
-    , getCannotPlaceInfo
-    , getPlacedInfo
-    , showCoord
+    , handleShot
+    , handleSunkShip
+    , canShootAt
+    , allShipsSunk
     ) where
 
 import qualified Data.Map as M
@@ -56,12 +57,11 @@ type RemainingShips = M.Map ShipLen ShipCount
 
 defaultShips :: RemainingShips
 defaultShips = M.fromList
-  [ (2, 1)
+  [ (2, 2)
   , (3, 2)
   , (4, 1)
   , (5, 1)
   ]
-
 
 emptyBoard :: Board
 emptyBoard = replicate Cnf.mapSize (replicate Cnf.mapSize Empty)  -- ~ = unknown
@@ -134,13 +134,59 @@ decrementShips len ships = M.update dec len ships
 move :: Coord -> Coord -> Coord
 move (dr, dc) (r, c) = (max 0 (min 9 (r+dr)), max 0 (min 9 (c+dc)))
 
-getCannotPlaceInfo :: Coord -> Coord -> String
-getCannotPlaceInfo c1 c2 =
-  "Cannot place ship from " ++ showCoord c1 ++ " to " ++ showCoord c2
+handleSunkShip :: Board -> Coord -> Coord -> Board
+handleSunkShip board c1 c2 =
+  let shipCoordsList = case shipCoords c1 c2 of
+                         Just cs -> cs
+                         Nothing -> []
+      -- Wszystkie pola wokół statku (w tym rogi)
+      around = [ n | c <- shipCoordsList, n <- adjacentCoords c ]
+      -- Tylko te, które są puste (nie są częścią statku i są w granicach)
+      toMark = filter (\coord -> inBounds coord && getCell board coord == Empty) around
+  in foldl (\b c -> setCell b c Miss) board toMark
 
-getPlacedInfo :: Coord -> Coord -> String
-getPlacedInfo c1 c2 =
-  "Placed ship from " ++ showCoord c1 ++ " to " ++ showCoord c2
+shoot :: Coord -> Board -> Cell
+shoot coord board =
+  case getCell board coord of
+    Ship  -> Hit
+    _     -> Miss
 
-showCoord :: Coord -> String
-showCoord (r, c) = [toEnum (fromEnum 'A' + c)] ++ show (r + 1)
+takeHit :: Coord -> ShipMap -> (ShipMap, Maybe UserShip)
+takeHit coord shipMap =
+  case M.foldrWithKey match Nothing shipMap of
+    Just (ship, lifes) ->
+      let newLifes = lifes - 1
+          newMap = M.insert ship newLifes shipMap
+          sunkShip = if newLifes == 0 then Just ship else Nothing
+      in (newMap, sunkShip)
+    Nothing -> (shipMap, Nothing)
+  where
+    match ship lifes acc
+      | coordInShip coord ship = Just (ship, lifes)
+      | otherwise              = acc
+
+    coordInShip (r, c) (UserShip (r1, c1) (r2, c2) _) =
+      (r1 == r2 && r == r1 && c >= min c1 c2 && c <= max c1 c2) ||
+      (c1 == c2 && c == c1 && r >= min r1 r2 && r <= max r1 r2)
+
+handleShot :: Coord -> ShipMap -> Board -> (Cell, ShipMap, Board, Maybe UserShip)
+handleShot coord shipMap board =
+  let result = shoot coord board
+      newBoard = setCell board coord result
+      (newShipMap, sunkShip) = if result == Hit
+                                   then takeHit coord shipMap
+                                   else (shipMap, Nothing)
+  in (result, newShipMap, applyHandleSunkShip newBoard sunkShip, sunkShip)
+
+applyHandleSunkShip :: Board -> Maybe UserShip -> Board
+applyHandleSunkShip board (Just ship) = handleSunkShip board (start ship) (end ship)
+applyHandleSunkShip board Nothing         = board
+
+
+canShootAt :: Board -> Coord -> Bool
+canShootAt board coord =
+  inBounds coord && (cell == Empty)
+  where cell = getCell board coord
+
+allShipsSunk :: ShipMap -> Bool
+allShipsSunk = all (== 0) . M.elems

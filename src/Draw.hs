@@ -16,6 +16,8 @@ module Draw
 
 import Ships
 import State
+import MsgHandle
+import Config
 import Brick(Widget)
 import Lens.Micro
 
@@ -24,7 +26,7 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Focus as F
 import Brick.Widgets.Border
 import Brick.Widgets.Core
-import Brick.Widgets.Center (center)
+import Brick.Widgets.Center (hCenter)
 import Data.Char  
 import Brick.AttrMap (attrName)
 
@@ -35,7 +37,7 @@ import qualified Data.List as L
 -- Drawing logic
 -- Draw function for each mode (window)
 drawUI :: St -> [Widget Name]
-drawUI st = [mainDisp <=> drawInfoMsg st]
+drawUI st = [mainDisp]
   where
     mainDisp = case st^.mode of
       Inputting      -> drawForm st
@@ -45,6 +47,8 @@ drawUI st = [mainDisp <=> drawInfoMsg st]
       Connected      -> drawConnected st
       Waiting        -> drawWaiting st
       Playing        -> drawPlaying st
+      Finished       -> drawFinished st
+      
 
 -- Draw the initial input form
 drawForm :: St -> Widget Name
@@ -113,14 +117,14 @@ drawConnected :: St -> Widget Name
 drawConnected st =
   C.center $
     vBox
-        [
-          C.center $ hBox
-            [ drawYourShips (st^.playerShips) (length (st^.playerBoard) + 2)
-            , (borderWithLabel (str "Your Board") $ drawBoard (st^.playerBoard) (Just (st^.cursorPos)))
-            , str " "
-            , drawShipsLeft (st^.remainingShips)
-            ]
-          , str "Use arow keys to move the cursor, Press SPACE to start placing"
+      [ hBox
+        [ drawYourShips (st^.playerShips) (length (st^.playerBoard) + 2)
+        , (borderWithLabel (str "Your Board") $ drawBoard (st^.playerBoard) (Just (st^.cursorPos)))
+        , str " "
+        , drawShipsLeft (st^.remainingShips)
+        ]
+      , str "Use arow keys to move the cursor, Press SPACE to start placing"
+      , drawInfoMsg (st^.infoMsg)
       ]
 
 
@@ -128,14 +132,14 @@ drawConnected st =
 drawBoard :: Board -> Maybe Coord -> Widget Name
 drawBoard board mCursor =
   vBox $
-    [ hBox (str "   " : [str (" " ++ [chr (ord 'A' + c)]) | c <- [0..9]]) ] ++
-    [ hBox (str (rowLabel r) : [drawCell r c | c <- [0..9]])
-    | r <- [0..9]
+    [ hBox (str "   " : [str ([chr (ord 'A' + c)] ++ " ") | c <- [0..(mapSize - 1) ]]) ] ++
+    [ hBox (str (rowLabel r) : [drawCell r c | c <- [0..(mapSize - 1)]])
+    | r <- [0..(mapSize - 1)]
     ]
   where
     rowLabel r
-      | r < 9     = " " ++ show (r+1) ++ " "
-      | otherwise = show (r+1) ++ " "
+      | r < mapSize - 1     = " " ++ show (r+1) ++ " "
+      | otherwise           = show (r+1) ++ " "
     drawCell r c =
       let cell = board !! r !! c
           symbol = case cell of
@@ -151,7 +155,7 @@ drawBoard board mCursor =
           finalAttr = if Just (r, c) == mCursor
                       then attrName "cursor"
                       else baseAttr
-      in withAttr finalAttr (str (" " ++ symbol))
+      in withAttr finalAttr (str (symbol ++ " "))
     --cellChar Empty = str "~"
     --cellChar Ship  = str "✕"
     --cellChar Hit   = str "✖"
@@ -173,9 +177,36 @@ drawPlaying :: St -> Widget Name
 drawPlaying st =
   C.center $
     vBox
-      [
-        str "MAIN GAME SCREEN PLACEHOLDER"
+        [ withAttr (attrName "bold") $ hCenter $ str turnMsg
+        , C.center $ hBox
+            [ drawYourShips (st^.playerShips) (length (st^.playerBoard) + 2)
+            , (borderWithLabel (str "Your Board") $ drawBoard (st^.playerBoard) (Nothing))
+            , str " "
+            , (borderWithLabel (str "Opponet's Board") $ drawBoard (st^.opponentBoard) (Just (st^.cursorPos)))
+            , str " "
+            , drawShipsLeft (st^.remainingShips)
+            ]
+          , str "Use arow keys to move the cursor, Press SPACE to shoot"
+          , drawInfoMsg (st^.infoMsg)
       ]
+  where
+    turnMsg = if st^.playerTurn then "Your Turn" else "Your Opponent's Turn"
+
+drawFinished :: St -> Widget Name
+drawFinished st =
+  C.center $
+    border $
+      hLimit 40 $
+        vLimit 9 $
+          vBox
+            [ C.hCenter $ withAttr (attrName $ if st^.gameWon then "win" else "lose") $
+                str ("   " ++ label ++ "   ")
+            , padTop (Pad 1) $ C.hCenter $ withAttr (attrName "bold") $ str text
+            , padTop (Pad 2) $ C.hCenter $ str "Press Escape to return to menu"
+            ]
+  where
+    label = if st^.gameWon then "WINNER" else "LOSER"
+    text  = if st^.gameWon then "Congratulations!!!" else "Better luck next time!"
 
 drawWaiting :: St -> Widget Name
 drawWaiting st =
@@ -186,11 +217,11 @@ drawWaiting st =
       ]
 
 
-drawInfoMsg :: St -> Widget Name
-drawInfoMsg st =
-  if null (st^.infoMsg)
+drawInfoMsg :: String -> Widget Name
+drawInfoMsg msg =
+  if null msg
     then str ""
-    else str $ getInfoMsg st
+    else str $ "INFO: " ++ msg
 
 
 drawYourShips :: ShipMap -> Int -> Widget Name
@@ -207,10 +238,3 @@ drawYourShips shipMap boardHeight =
           l  = len ship
       in str $ "(" ++ c1 ++ ", " ++ c2 ++ ")  " ++ show lifes ++ "/" ++ show l
 
-
-getInfoMsg :: St -> String
-getInfoMsg st =
-  let msg = st^.infoMsg
-  in if null msg
-       then ""
-       else "INFO: " ++ msg

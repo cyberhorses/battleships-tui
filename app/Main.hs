@@ -7,48 +7,25 @@ module Main where
 import Lens.Micro
 import qualified Graphics.Vty as V
 
-import Game (NetworkEvent(..), getIPv4Interfaces)  -- Main Game
+import GameSession (NetworkEvent(..), getIPv4Interfaces)  -- Main Game
 
 import Brick
   ( App(..)
   )
-
+import System.IO
 import Events  -- Event handling (button press, network etc.)
 import State   -- Current app state
 import Draw    -- Drawing TUI scenes
-import Ships
 
 import Graphics.Vty.Platform.Unix (mkVty)
-import Brick.BChan (BChan, newBChan)
+import Brick.BChan (newBChan)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.AttrMap as A
-import qualified Brick.Focus as F
 import qualified Brick.Main as M
 
 import Brick.Util (on, fg)
 
 
--- Initial state
-initialState :: BChan NetworkEvent -> Interfaces -> St
-initialState chan interfaces =
-    St (F.focusRing [EditIp, EditPswd])
-       (E.editor EditIp (Just 1) "")
-       (E.editor EditPswd (Just 1) "")
-       interfaces
-       0
-       Inputting
-       Nothing
-       chan
-       emptyBoard
-       emptyShipMap
-       emptyBoard
-       (0, 0)
-       (0,0)
-       Selecting
-       defaultShips
-       False
-       False
-       ""
 
 -- AttrMap
 theMap :: A.AttrMap
@@ -61,6 +38,7 @@ theMap = A.attrMap V.defAttr
     , (A.attrName "ship",   fg V.cyan)
     , (A.attrName "hit",    fg V.red)
     , (A.attrName "miss",   fg V.white)
+    , (A.attrName "bold", V.withStyle V.defAttr V.bold)
     ]
 
 -- App definition
@@ -76,6 +54,9 @@ theApp = App
 -- Main
 main :: IO ()
 main = do
+    hSetBuffering stdout LineBuffering
+    hSetBuffering stderr LineBuffering
+    
     chan <- newBChan 10
     interfaces <- getIPv4Interfaces
     let initSt = initialState chan interfaces
