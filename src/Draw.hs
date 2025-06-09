@@ -54,14 +54,12 @@ drawUI st = [mainDisp]
 drawForm :: St -> Widget Name
 drawForm st =
     C.center . borderWithLabel (str "Join a game") $
-        (str "IP Address: " <+> (hLimit 30 $ vLimit 1 eIp)) <=>
         str " " <=>
-        (str "Password:   " <+> (hLimit 30 $ vLimit 1 ePswd)) <=>
+        (str "IP Address: " <+> (hLimit 30 $ vLimit 1 eIp)) <=>
         str " " <=>
         str "TAB to switch fields. Enter to submit. Esc to quit. 'F1' to host"
   where
     eIp = F.withFocusRing (st^.focusRing) (E.renderEditor (str . unlines)) (st^.editIp)
-    ePswd = F.withFocusRing (st^.focusRing) (E.renderEditor (str . unlines)) (st^.editPswd)
 
 -- Draw the results (to be changed, this gets drawn after joining/hosting)
 drawResult :: St -> Widget Name
@@ -70,12 +68,10 @@ drawResult st =
         str "You entered:" <=>
         str "" <=>
         str ("IP Address: " ++ ip) <=>
-        str ("Password:   " ++ pwd) <=>
         str "" <=>
         str "Press Esc to exit."
   where
     ip = unwords $ E.getEditContents $ st^.editIp
-    pwd = unwords $ E.getEditContents $ st^.editPswd
 
 -- Draw the hosting setup window
 drawHostingSetup :: St -> Widget Name
@@ -85,14 +81,11 @@ drawHostingSetup st =
         [ str "Host on:"
         , vBox $ zipWith drawIface [0..] (st^.ifaces)
         , str " "
-        , str "Password:   " <+> (hLimit 30 $ vLimit 1 ePswd)
-        , str " "
         , str "Press ENTER to submit."
         , str ""
         , str "Press Esc to exit."
         ]
   where
-    ePswd = F.withFocusRing (st^.focusRing) (E.renderEditor (str . unlines)) (st^.editPswd)
     sel = st^.ifaceSelected
     drawIface i (n, ip) =
       (if i == sel then withAttr (attrName "editFocusedAttr") else id) $

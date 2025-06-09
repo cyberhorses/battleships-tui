@@ -1,7 +1,7 @@
 module Config where
 
 gamePort :: String
-gamePort = "3000"
+gamePort = "35540"
 
 mapSize :: Int
 mapSize = 10

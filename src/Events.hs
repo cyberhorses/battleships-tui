@@ -39,12 +39,12 @@ appEvent :: BrickEvent Name NetworkEvent -> EventM Name St ()
 appEvent (VtyEvent (V.EvKey V.KEsc [])) = do
     m <- use mode
     case m of
-        Hosting -> backToMenu
+        Hosting   -> backToMenu
         Connected -> backToMenu
-        Waiting -> backToMenu
-        Playing -> backToMenu
-        Finished -> backToMenu
+        Waiting   -> backToMenu
+        Finished  -> backToMenu
         Inputting -> halt
+        Playing   -> return () -- do not allow leaving mid-game
         _         -> mode .= Inputting
 
 -- | Handle Enter
@@ -62,18 +62,6 @@ appEvent (VtyEvent (V.EvKey (V.KFun 1) [])) = do
     if m == Inputting then do
         mode .= HostingSetup
         focusRing %= F.focusSetCurrent EditPswd
-    else return ()
-
--- | Handle `tab` (change focus in input)
-appEvent (VtyEvent (V.EvKey (V.KChar '\t') [])) = do
-    m <- use mode
-    if m == Inputting then focusRing %= F.focusNext
-    else return ()
-
--- | Handle `backtab` (change focus in input)
-appEvent (VtyEvent (V.EvKey V.KBackTab [])) = do
-    m <- use mode
-    if m == Inputting then focusRing %= F.focusPrev
     else return ()
 
 -- | UP ARROW
