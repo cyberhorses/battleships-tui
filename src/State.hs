@@ -112,7 +112,5 @@ initialState chan interfaces =
        True -- joiner firs
        False
 
-
-
 makeLenses ''St
 

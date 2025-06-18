@@ -74,7 +74,7 @@ startJoining ip = do
     connect sock (addrAddress serveraddr)
 
     putStrLn $ "Connected to host at " ++ ip
-    
+
     opponentRef <- newIORef (Just sock)
     pure $ GameSession sock opponentRef
 
